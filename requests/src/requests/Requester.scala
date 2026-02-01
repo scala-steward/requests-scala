@@ -44,7 +44,13 @@ trait BaseSession extends AutoCloseable {
   def send(method: String) = Requester(method, this)
 
   // Executor and HttpClient for this session, lazily initialized
-  lazy val executor: ExecutorService = Executors.newCachedThreadPool()
+  lazy val executor: ExecutorService = Executors.newCachedThreadPool(new ThreadFactory {
+    override def newThread(r: Runnable): Thread = {
+      val t = new Thread(r, "requests-scala-http")
+      t.setDaemon(true) // Mark as daemon threads to avoid blocking JVM shutdown
+      t
+    }
+  })
   lazy val sharedHttpClient: HttpClient = BaseSession.buildHttpClient(
     proxy, cert, sslContext, verifySslCerts, connectTimeout, executor
   )
